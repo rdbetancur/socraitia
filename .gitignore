@@ -1,0 +1,20 @@
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# node
+node_modules/
+.next/
+next-env.d.ts
+
+# env / secrets
+.env
+.env.local
+*.json.key
+service-account*.json
+
+# local artifacts
+*.log
+.DS_Store
+*.tsbuildinfo

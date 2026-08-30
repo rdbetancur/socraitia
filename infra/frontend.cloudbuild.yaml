@@ -1,0 +1,18 @@
+# Next.js inlines NEXT_PUBLIC_* at build time. This is the only reliable way
+# to get the backend URL into the Cloud Run frontend image.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=${_API_URL}
+      - -t
+      - ${_IMAGE}
+      - .
+images:
+  - ${_IMAGE}
+substitutions:
+  _API_URL: https://example.invalid
+  _IMAGE: unused
+options:
+  logging: CLOUD_LOGGING_ONLY
