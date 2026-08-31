@@ -334,30 +334,6 @@ We do **not** claim The Fortified Enterprise Fleet (no Agent Registry,
 Model Armor, or enterprise identity). We do **not** claim the Gemma / Veo /
 Lyria bonus; the classification task stayed inside the Cartographer.
 
-### How the product maps to the criteria
-
-| Criterion (weight) | What a judge should see |
-| --- | --- |
-| Innovation & operational utility (40%) | A claim is spoken → Cartographer mutates the graph → Pub/Sub queues the Verifier → evidence and red tension edges arrive while the user is gone → the briefing confronts them on return. PDF drop → section-aware claims with provenance → literature-vs-you contradiction. |
-| Architectural discipline (30%) | SHA-1 node identity (dedupe + idempotency + edge resolution). Document-level ingest hash. Context = graph + last 6 + learner, never full replay. Two-region reality isolated in `config.py`. Failure table above. IAM least-privilege in `infra/iam_setup.sh`. |
-| Demo & production readiness (30%) | Live Cloud Run URLs. `verify_stack.sh` 7/7. Seeded demo (`seed_demo.py`). Architecture PNG. This README is the spin-up. |
-
-### Four-minute demo (shoot this)
-
-Judges score the first four minutes only, in English, public on YouTube or
-Vimeo. Show the backend on Google Cloud (Cloud Run URL or console) on
-camera.
-
-1. Open the live URL → briefing on **AI in Education** (arrival).
-2. Click a tension → **Interrogate** → the question is about *that* claim.
-3. Filter `mastery` in the index → click → canvas centers, dossier reads
-   relations as full sentences.
-4. Send one turn that contradicts a seeded claim → session pulse ticks →
-   red edge / attention row appears.
-5. Drop or mention a PDF (or point at the ingested node with provenance).
-6. Switch to **EdTech Product Strategy** → echo to the other project.
-7. 10 seconds of Cloud Run / the `.run.app` URL. Cut.
-
 ---
 
 *Architecture deep-dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
