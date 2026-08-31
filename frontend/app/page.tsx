@@ -3,23 +3,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AgentFeed from "@/components/AgentFeed";
+import Briefing from "@/components/Briefing";
 import ChatRail from "@/components/ChatRail";
 import GraphCanvas from "@/components/GraphCanvas";
 import NodeDossier from "@/components/NodeDossier";
+import NodePanel from "@/components/NodePanel";
 import ProjectSwitcher from "@/components/ProjectSwitcher";
 import {
   createProject,
   endSession,
   fetchBootstrap,
+  fetchBriefing,
   fetchDossier,
+  markBriefingSeen,
   sendFeedback,
   streamTurn,
   uploadDocuments,
   watchProject,
 } from "@/lib/api";
+import { buildAttention } from "@/lib/attention";
 import { NODE_COLORS, NODE_LABELS } from "@/lib/theme";
 import type {
   Bootstrap,
+  Briefing as BriefingData,
   Dossier,
   FeedbackVerdict,
   FeedLine,
@@ -27,6 +33,7 @@ import type {
   GraphNode,
   LearnerModel,
   Message,
+  SessionPulse,
   TurnEvent,
   TurnMode,
 } from "@/lib/types";
@@ -48,6 +55,15 @@ export default function Console() {
   const [dragging, setDragging] = useState(false);
   const [ingestFlash, setIngestFlash] = useState(false);
   const [focusNode, setFocusNode] = useState<GraphNode | null>(null);
+  const [briefing, setBriefing] = useState<BriefingData | null>(null);
+  const [briefingOpen, setBriefingOpen] = useState(false);
+  const [unseenCount, setUnseenCount] = useState(0);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [centerRequest, setCenterRequest] = useState<{
+    id: string;
+    at: number;
+  } | null>(null);
+  const [sessionEchoes, setSessionEchoes] = useState(0);
 
   const applyBoot = useCallback((data: Bootstrap) => {
     setBoot(data);
@@ -59,7 +75,31 @@ export default function Console() {
     setSelectedId(null);
     setDossier(null);
     setLearner(data.learner_model ?? null);
+    setSessionEchoes(0);
+    setFocusNode(null);
+    setPanelOpen(true);
     setStatus("ready");
+    // Arrival: the briefing is the front door. Always open it when there is
+    // anything to show. Dismiss hides it; the topbar button brings it back.
+    setBriefing(null);
+    setBriefingOpen(false);
+    setUnseenCount(0);
+    fetchBriefing(data.project_id, true)
+      .then((b) => {
+        setBriefing(b.empty ? null : b);
+        const unread = b.unseen
+          ? b.unseen.tensions +
+            b.unseen.echoes +
+            b.unseen.verified +
+            b.unseen.ingested
+          : 0;
+        setUnseenCount(unread);
+        setBriefingOpen(!b.empty);
+      })
+      .catch(() => {
+        setBriefing(null);
+        setBriefingOpen(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -120,6 +160,7 @@ export default function Console() {
     } else if (event.type === "learner") {
       setLearner(event.learner_model);
     } else if (event.type === "echoes") {
+      setSessionEchoes((n) => n + event.echoes.length);
       setNodes((prev) =>
         prev.map((n) => {
           const updated = event.nodes.find((u) => u.id === n.id);
@@ -128,6 +169,27 @@ export default function Console() {
       );
     }
   }, []);
+
+  /**
+   * Session pulse is derived, never counted.
+   *
+   * `bornAt` is stamped on anything that arrived through a live diff, so the
+   * accumulated graph already knows what this session produced — which makes
+   * the pulse immune to duplicate events and to Pub/Sub redelivery.
+   */
+  const pulse = useMemo<SessionPulse>(
+    () => ({
+      nodes: nodes.filter((n) => n.bornAt).length,
+      edges: links.filter((l) => l.bornAt).length,
+      tensions: links.filter((l) => l.bornAt && l.relation === "contradicts")
+        .length,
+      gaps: nodes.filter((n) => n.bornAt && n.type === "gap").length,
+      echoes: sessionEchoes,
+    }),
+    [nodes, links, sessionEchoes],
+  );
+
+  const attention = useMemo(() => buildAttention(nodes, links), [nodes, links]);
 
   useEffect(() => {
     if (!boot?.project_id) return;
@@ -147,6 +209,57 @@ export default function Console() {
     },
     [boot],
   );
+
+  /**
+   * Reveal is selection plus camera, for every entry point that is not the
+   * canvas itself: the panel, the briefing and dossier jump links. Without the
+   * camera move, clicking a claim in a list leaves the user hunting for it.
+   */
+  const revealNode = useCallback(
+    (nodeId: string) => {
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      selectNode(node);
+      setCenterRequest({ id: nodeId, at: Date.now() });
+    },
+    [nodes, selectNode],
+  );
+
+  const interrogate = useCallback(
+    (node: GraphNode) => {
+      setFocusNode(node);
+      setBriefingOpen(false);
+      setSelectedId(node.id);
+      setDossier(null);
+      setCenterRequest({ id: node.id, at: Date.now() });
+    },
+    [],
+  );
+
+  const interrogateById = useCallback(
+    (nodeId: string) => {
+      const node = nodes.find((n) => n.id === nodeId);
+      if (node) interrogate(node);
+    },
+    [nodes, interrogate],
+  );
+
+  const dismissBriefing = useCallback(() => {
+    setBriefingOpen(false);
+    setUnseenCount(0);
+    if (boot) markBriefingSeen(boot.project_id).catch(() => {});
+  }, [boot]);
+
+  const openBriefing = useCallback(() => {
+    if (!boot) return;
+    fetchBriefing(boot.project_id, true)
+      .then((b) => {
+        if (b.empty) return;
+        setBriefing(b);
+        setBriefingOpen(true);
+      })
+      .catch(() => {});
+  }, [boot]);
 
   const send = useCallback(
     async (text: string, mode: TurnMode) => {
@@ -343,7 +456,29 @@ export default function Console() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">SOCRAITIA</div>
+        {!panelOpen && (
+          <button
+            type="button"
+            className="panel-reopen"
+            onClick={() => setPanelOpen(true)}
+            title="Show the index"
+          >
+            show index
+          </button>
+        )}
         <div className="topbar-meta">
+          <button
+            type="button"
+            className="briefing-btn"
+            disabled={!boot}
+            onClick={openBriefing}
+            title="Reopen the briefing"
+          >
+            Briefing
+            {unseenCount > 0 && (
+              <span className="briefing-badge">{unseenCount}</span>
+            )}
+          </button>
           <ProjectSwitcher
             currentId={boot?.project_id ?? ""}
             projects={boot?.projects ?? []}
@@ -377,7 +512,19 @@ export default function Console() {
         </div>
       </header>
 
-      <div className="main">
+      <div className={`main${panelOpen ? "" : " main-solo"}`}>
+        {panelOpen ? (
+          <NodePanel
+            nodes={nodes}
+            links={links}
+            attention={attention}
+            selectedId={selectedId}
+            onSelect={(node) => revealNode(node.id)}
+            onInterrogate={interrogate}
+            onCollapse={() => setPanelOpen(false)}
+          />
+        ) : null}
+
         <div
           className={`stage${dragging ? " stage-drop" : ""}`}
           onDragOver={(e) => {
@@ -393,7 +540,9 @@ export default function Console() {
           <GraphCanvas
             nodes={nodes}
             links={links}
+            attention={attention}
             selectedId={selectedId}
+            centerRequest={centerRequest}
             onSelect={selectNode}
           />
           {nodes.length === 0 && status !== "connecting" && (
@@ -411,11 +560,26 @@ export default function Console() {
             dossier={dossier}
             loading={dossierLoading}
             onClose={() => selectNode(null)}
-            onInterrogate={(node) => {
-              setFocusNode(node);
-              selectNode(null);
-            }}
+            onInterrogate={interrogate}
+            onCenter={(node) => setCenterRequest({ id: node.id, at: Date.now() })}
+            onJump={revealNode}
           />
+
+          {briefing && briefingOpen && boot && (
+            <Briefing
+              data={briefing}
+              projectTitle={boot.project_title}
+              onInterrogate={(id) => {
+                dismissBriefing();
+                interrogateById(id);
+              }}
+              onReveal={(id) => {
+                dismissBriefing();
+                revealNode(id);
+              }}
+              onDismiss={dismissBriefing}
+            />
+          )}
         </div>
 
         <div className="rail">
@@ -423,6 +587,7 @@ export default function Console() {
             messages={messages}
             busy={status === "working"}
             exchange={exchange}
+            pulse={pulse}
             onSend={send}
             onFeedback={giveFeedback}
             onUpload={uploadFiles}

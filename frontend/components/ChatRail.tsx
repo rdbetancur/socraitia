@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { FeedbackVerdict, Message, TurnMode } from "@/lib/types";
+import type {
+  FeedbackVerdict,
+  Message,
+  SessionPulse,
+  TurnMode,
+} from "@/lib/types";
 
 interface Props {
   messages: Message[];
   busy: boolean;
   exchange: number;
+  pulse: SessionPulse;
   onSend: (text: string, mode: TurnMode) => void;
   onFeedback: (exchange: number, question: string, verdict: FeedbackVerdict) => void;
   onUpload: (files: File[]) => void;
@@ -15,10 +21,40 @@ interface Props {
   onClearFocus: () => void;
 }
 
+/** Progress has to be felt, so the pulse is quiet but never absent once work starts. */
+function Pulse({ pulse }: { pulse: SessionPulse }) {
+  if (!pulse.nodes && !pulse.edges) return null;
+  return (
+    <div className="pulse">
+      <span className="pulse-label">this session</span>
+      <span className="pulse-stat">
+        <b>+{pulse.nodes}</b> node{pulse.nodes === 1 ? "" : "s"}
+      </span>
+      {pulse.tensions > 0 && (
+        <span className="pulse-stat pulse-tension">
+          <b>{pulse.tensions}</b> tension
+          {pulse.tensions === 1 ? "" : "s"} surfaced
+        </span>
+      )}
+      {pulse.gaps > 0 && (
+        <span className="pulse-stat pulse-gap">
+          <b>{pulse.gaps}</b> gap{pulse.gaps === 1 ? "" : "s"}
+        </span>
+      )}
+      {pulse.echoes > 0 && (
+        <span className="pulse-stat pulse-echo">
+          <b>{pulse.echoes}</b> echo{pulse.echoes === 1 ? "" : "es"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function ChatRail({
   messages,
   busy,
   exchange,
+  pulse,
   onSend,
   onFeedback,
   onUpload,
@@ -51,6 +87,8 @@ export default function ChatRail({
           {note ? "no question" : `exchange ${exchange}`}
         </span>
       </header>
+
+      <Pulse pulse={pulse} />
 
       {focusText && (
         <div className="focus-chip">

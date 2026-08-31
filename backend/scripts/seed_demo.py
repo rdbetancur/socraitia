@@ -225,6 +225,18 @@ async def main() -> None:
     print(f"  learner_model: scaffolding={LEARNER_MODEL['scaffolding_level']}, "
           f"{len(LEARNER_MODEL['blind_spots'])} blind spots")
 
+    # A freshly seeded project has never been visited, so the briefing must be
+    # armed. Without this a re-seed inherits the watermark from the last demo
+    # and the arrival state stays silent.
+    print("==> arming the briefing")
+    await repo.db().collection("users").document(config.DEMO_UID).set(
+        {"last_seen_at": {}}, merge=True
+    )
+    await repo.db().collection("users").document(config.DEMO_UID).update(
+        {"last_seen_at": {}}
+    )
+    print("  last_seen_at cleared")
+
     print("done.")
 
 

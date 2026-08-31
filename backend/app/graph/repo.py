@@ -127,6 +127,7 @@ def _node_from_doc(doc_id: str, d: dict) -> NodeOut:
         session_id=d.get("session_id", ""),
         degree=d.get("degree", 0),
         created_at=d.get("created_at", ""),
+        verified_at=d.get("verified_at", ""),
         provenance=d.get("provenance", ""),
     )
 
@@ -579,6 +580,28 @@ async def load_learner_model(uid: str) -> dict:
     if not snap.exists:
         return {}
     return (snap.to_dict() or {}).get("learner_model", {}) or {}
+
+
+async def load_last_seen(uid: str, project_id: str) -> str:
+    """When this user last acknowledged a briefing for this project.
+
+    One field on the user doc, keyed by project. Everything the briefing shows
+    is derived from node/edge timestamps already in Firestore; this is only the
+    watermark that says "you have seen up to here".
+    """
+    snap = await db().collection("users").document(uid).get()
+    if not snap.exists:
+        return ""
+    seen = (snap.to_dict() or {}).get("last_seen_at") or {}
+    return seen.get(project_id, "") if isinstance(seen, dict) else ""
+
+
+async def mark_seen(uid: str, project_id: str) -> str:
+    now = _now()
+    await db().collection("users").document(uid).set(
+        {"last_seen_at": {project_id: now}}, merge=True
+    )
+    return now
 
 
 async def load_feedback_tally(uid: str) -> dict:

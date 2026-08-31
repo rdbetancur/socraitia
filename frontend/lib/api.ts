@@ -1,5 +1,6 @@
 import type {
   Bootstrap,
+  Briefing,
   Dossier,
   FeedbackVerdict,
   LearnerModel,
@@ -72,6 +73,22 @@ export async function uploadDocuments(
   });
   if (!res.ok) throw new Error(`ingest failed: ${res.status}`);
   return res.json();
+}
+
+export async function fetchBriefing(
+  projectId: string,
+  full = false,
+): Promise<Briefing> {
+  const q = full ? "?full=true" : "";
+  const res = await fetch(`${API_BASE}/api/briefing/${projectId}${q}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`briefing failed: ${res.status}`);
+  return res.json();
+}
+
+export async function markBriefingSeen(projectId: string): Promise<void> {
+  await fetch(`${API_BASE}/api/briefing/${projectId}/seen`, { method: "POST" });
 }
 
 export async function fetchDossier(

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AmbientField from "@/components/AmbientField";
+import { EMPTY_BADGES, type AttentionMap } from "@/lib/attention";
 import { NODE_COLORS, PULSE_MS, RELATION_COLORS } from "@/lib/theme";
 import type { GraphLink, GraphNode } from "@/lib/types";
 
@@ -14,14 +15,29 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
 interface Props {
   nodes: GraphNode[];
   links: GraphLink[];
+  attention: AttentionMap;
   selectedId: string | null;
+  /** Bumped by the panel and the dossier to fly the camera to one node. */
+  centerRequest: { id: string; at: number } | null;
   onSelect: (node: GraphNode | null) => void;
 }
 
 const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
 
-function radius(node: GraphNode): number {
-  return 3.4 + Math.min(node.degree ?? 0, 9) * 0.72;
+/**
+ * Heat, not degree, decides how loud a node is.
+ *
+ * A settled verified claim and an open contradiction were previously drawn the
+ * same size, which made the map a uniform field of dots with no answer to the
+ * only question a reader actually has: where does my thinking need me. Heat
+ * comes from lib/attention so the canvas, panel and dossier cannot disagree.
+ */
+const HEAT_SCALE = [0.82, 1, 1.28] as const;
+const HEAT_GLOW = [3, 8, 22] as const;
+const HEAT_DIM = [0.46, 1, 1] as const;
+
+function radius(node: GraphNode, heat: 0 | 1 | 2 = 1): number {
+  return (3.4 + Math.min(node.degree ?? 0, 9) * 0.72) * HEAT_SCALE[heat];
 }
 
 function truncate(text: string, max: number): string {
@@ -31,7 +47,9 @@ function truncate(text: string, max: number): string {
 export default function GraphCanvas({
   nodes,
   links,
+  attention,
   selectedId,
+  centerRequest,
   onSelect,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -73,6 +91,18 @@ export default function GraphCanvas({
   }, [nodes.length]);
 
   /**
+   * Selection from the panel has to move the camera, or the two views come
+   * apart: the panel says "this one" and the canvas keeps showing elsewhere.
+   */
+  useEffect(() => {
+    if (!centerRequest) return;
+    const target = nodes.find((n) => n.id === centerRequest.id) as any;
+    if (target?.x === undefined) return;
+    fgRef.current?.centerAt(target.x, target.y, 620);
+    fgRef.current?.zoom(2.1, 620);
+  }, [centerRequest, nodes]);
+
+  /**
    * Ambient motion.
    *
    * A force graph normally freezes once the simulation cools, which makes a
@@ -89,9 +119,12 @@ export default function GraphCanvas({
 
   const drawNode = useCallback(
     (node: any, ctx: CanvasRenderingContext2D, scale: number) => {
+      const badges = attention[node.id] ?? EMPTY_BADGES;
+      const heat = badges.heat;
       const color = NODE_COLORS[node.type] ?? "#8b949e";
-      const r = radius(node);
+      const r = radius(node, heat);
       const isActive = node.id === selectedId || node.id === hoverId;
+      const dim = isActive ? 1 : HEAT_DIM[heat];
 
       // Creation pulse: the most-watched animation in the demo. A bright
       // flash on the node itself, then two staggered expanding rings — the
@@ -125,9 +158,22 @@ export default function GraphCanvas({
         }
       }
 
+      // A hot node gets a warm halo behind it so the map reads as a heatmap
+      // before any label is legible.
+      if (heat === 2 && !isActive) {
+        const beat = 0.6 + 0.4 * Math.sin(Date.now() / 900);
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 5 + beat * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = badges.tension
+          ? "rgba(248, 81, 73, 0.13)"
+          : "rgba(219, 109, 40, 0.13)";
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = dim;
       ctx.fillStyle = color;
       ctx.shadowColor = color;
-      ctx.shadowBlur = isActive ? 18 : 8;
+      ctx.shadowBlur = isActive ? 20 : HEAT_GLOW[heat];
       ctx.beginPath();
       if (node.type === "note") {
         // Pins, not orbs: a note is a capture, not a claim.
@@ -142,6 +188,7 @@ export default function GraphCanvas({
         ctx.fill();
       }
       ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
 
       if (node.echoes?.length) {
         // Cross-project echo: one of the strongest ideas in the product, so
@@ -198,32 +245,42 @@ export default function GraphCanvas({
       }
 
       // Labels carry the meaning, but at 70+ nodes and low zoom they are
-      // unreadable noise. Declutter: zoomed out, only active, high-degree or
-      // freshly-born nodes speak; zooming in brings every label back.
+      // unreadable noise. Speaking rights follow heat: a node that needs the
+      // user is always labelled, a settled one waits until you zoom into it.
       const recent = node.bornAt && Date.now() - node.bornAt < 9000;
-      const prominent = isActive || recent || (node.degree ?? 0) >= 4;
-      if (scale < 0.85 && !prominent) return;
-      const label = truncate(node.text, isActive ? 74 : 34);
-      const fontSize = 4.1;
-      ctx.font = `${fontSize}px ${MONO}`;
+      const alwaysSpeaks = isActive || recent || heat === 2;
+      if (!alwaysSpeaks && scale < (heat === 0 ? 1.5 : 0.85)) return;
+      const label = truncate(node.text, isActive ? 64 : heat === 2 ? 42 : 28);
+      // Cancel the zoom so type is real screen pixels. Scaling a world-unit
+      // font with the graph makes the glyphs jagged — the thing that looked
+      // "feo" when we just bumped size.
+      const px = heat === 2 || isActive ? 12 : 10;
+      ctx.save();
+      ctx.translate(node.x, node.y);
+      ctx.scale(1 / scale, 1 / scale);
+      ctx.font = `500 ${px}px ${MONO}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-
-      const padding = 1.3;
+      const padX = 5;
+      const padY = 3;
       const width = ctx.measureText(label).width;
-      const top = node.y + r + 3;
-      ctx.fillStyle = isActive ? "rgba(20,23,28,0.96)" : "rgba(8,9,11,0.78)";
+      const top = r * scale + 7;
+      ctx.globalAlpha = dim;
+      ctx.fillStyle =
+        heat === 2 || isActive ? "rgba(8,9,11,0.92)" : "rgba(8,9,11,0.78)";
       ctx.fillRect(
-        node.x - width / 2 - padding,
-        top - padding,
-        width + padding * 2,
-        fontSize + padding * 2,
+        -width / 2 - padX,
+        top - padY,
+        width + padX * 2,
+        px + padY * 2,
       );
-
-      ctx.fillStyle = isActive ? "#e6edf3" : "#7d868f";
-      ctx.fillText(label, node.x, top);
+      ctx.fillStyle =
+        heat === 2 || isActive ? "#f0f3f6" : "#b1bac4";
+      ctx.fillText(label, 0, top);
+      ctx.restore();
+      ctx.globalAlpha = 1;
     },
-    [selectedId, hoverId],
+    [selectedId, hoverId, attention],
   );
 
   const drawLink = useCallback(
@@ -258,7 +315,7 @@ export default function GraphCanvas({
 
       // Arrowhead, so relation direction is readable without hovering.
       const angle = Math.atan2(b.y - a.y, b.x - a.x);
-      const tipDistance = radius(b) + 2.2;
+      const tipDistance = radius(b, attention[b.id]?.heat) + 2.2;
       const tipX = b.x - Math.cos(angle) * tipDistance;
       const tipY = b.y - Math.sin(angle) * tipDistance;
       const len = (tension ? 5 : 3.8) / scale;
@@ -278,7 +335,7 @@ export default function GraphCanvas({
       ctx.fill();
       ctx.globalAlpha = 1;
     },
-    [],
+    [attention],
   );
 
   const data = useMemo(() => ({ nodes, links }), [nodes, links]);
@@ -296,7 +353,13 @@ export default function GraphCanvas({
           nodeCanvasObject={drawNode}
           nodePointerAreaPaint={(node: any, color: string, ctx: any) => {
             ctx.beginPath();
-            ctx.arc(node.x, node.y, radius(node) + 5, 0, Math.PI * 2);
+            ctx.arc(
+              node.x,
+              node.y,
+              radius(node, attention[node.id]?.heat) + 5,
+              0,
+              Math.PI * 2,
+            );
             ctx.fillStyle = color;
             ctx.fill();
           }}

@@ -77,6 +77,7 @@ class NodeOut(BaseModel):
     session_id: str = ""
     degree: int = 0
     created_at: str = ""
+    verified_at: str = ""
     provenance: str = ""
     echoes: list[EchoOut] = Field(default_factory=list)
 

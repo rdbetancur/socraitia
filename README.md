@@ -1,8 +1,23 @@
 # Socraitia — an AI thinking partner, not an answer machine
 
+**Track:** The Collaborative Partner
+([All Things Agentic Hackathon](https://allthingsagentichackathon.devpost.com/))
+
 **Live demo:** https://socraitia-web-424012738412.us-central1.run.app
+**API (Cloud Run):** https://socraitia-api-424012738412.us-central1.run.app
+**Repo:** https://github.com/rdbetancur/socraitia (public)
 **Stack proof:** `./scripts/verify_stack.sh` — 7/7 checks against the live
 Vertex API, ~15s. Run it before believing anything this README claims.
+
+| Mandatory (every track) | What we ship |
+| --- | --- |
+| Gemini 3.5 or newer via Vertex AI | `gemini-3.5-flash` @ `global` — Socratic, Cartographer, Verifier, Modeler, Ingestion |
+| A Google agent framework | Google ADK 2.8 (`LlmAgent` + `Runner` in `backend/app/agents/`) |
+| A Google Cloud service | Cloud Run (web + api), Firestore, Pub/Sub, Cloud Storage |
+
+This is not a chatbot. Five ADK agents take action on a persistent graph:
+two sync (question + extract), three async (verify, ingest, model the
+learner). The conversation is a side rail. **The graph is the product.**
 
 ---
 
@@ -52,6 +67,19 @@ disagrees with what you just said.
 - **Node-anchored dialogue** — click any node, hit *Interrogate this*, and
   the dialogue focuses on that specific claim: its tensions, its evidence,
   its provenance.
+- **The briefing** — open a project and the instrument reports what it found
+  while you were gone: claims verified, sources retrieved, contradictions
+  detected, echoes to other projects. Every line shows both claims in full
+  with *Interrogate* attached. It is derived on read from node and edge
+  timestamps, so it can never disagree with the graph. *Enter the map*
+  dismisses it; **Briefing** in the topbar reopens the current state at any
+  time. If nothing happened, the overlay stays silent.
+- **The attention layer** — the canvas is a heatmap of where your thinking is
+  unfinished. Nodes in open tension or marked as argument gaps are larger,
+  warmly haloed, and always labelled; settled verified nodes recede and only
+  speak when you zoom into them. The left panel leads with *Requires your
+  attention* and then indexes every node, grouped by type, full text, with an
+  instant filter. Panel and canvas are two views of one selection.
 
 ## Architecture
 
@@ -144,6 +172,21 @@ are born `active`; only the *user's* claims go through the Verifier. This is
 an epistemic distinction, not a shortcut: the system verifies what you
 assert, not what Bloom asserted in 1984. It also keeps the pending queue
 honest — a pile of unverifiable literature would read as a stuck pipeline.
+
+**The briefing is derived, never stored.** The one thing persisted for the
+arrival state is a single `last_seen_at` watermark per project on the user
+document. Everything the briefing reports is recomputed on read from
+`created_at`, `verified_at`, `created_by_agent` and edge timestamps that
+already exist. A stored digest would be a second source of truth about the
+graph, and it would go stale the moment the Verifier wrote an edge. The
+watermark advances only when the user dismisses (it drives the unread
+badge). Reopening from the topbar fetches `?full=true` and does not depend
+on rolling the watermark back.
+
+**One derivation of "what matters".** Canvas, panel, dossier and briefing all
+read node heat from `frontend/lib/attention.ts`; none of them computes it. If
+three surfaces each decided independently which nodes were hot, they would
+drift, and a map that disagrees with its own index is worse than no index.
 
 **Contradiction detection scales across two mechanisms.** Empirically
 observed in testing: in small graphs the Cartographer catches
@@ -249,13 +292,71 @@ cd frontend && npm install && npm run dev        # http://localhost:3000
 
 Useful scripts (`backend/scripts/`): `smoke_turn.py` (core loop, throwaway
 project), `cloud_e2e.py` (deployed end-to-end), `seed_demo.py` (demo state),
-`reset_learner_model.py` (wipe learner state).
+`reset_learner_model.py` (wipe learner state), `reset_briefing.py` (optional
+watermark rewind — the topbar Briefing button no longer needs it).
 
 ## Stack
 
 Gemini 3.5 Flash (Vertex AI, global endpoint) · Google ADK 2.8 ·
 gemini-embedding-2 · Firestore (us-central1) · Cloud Run · Pub/Sub · Cloud
 Storage · Next.js. No non-Google infrastructure.
+
+**Other data sources:** the Verifier grounds user claims against **Google
+Search** (`google_search` ADK tool). Ingested claims come from PDFs the
+user drops onto the canvas. No third-party APIs.
+
+---
+
+## Hackathon submission (judges)
+
+Mapped 1:1 to
+[What to Submit](https://allthingsagentichackathon.devpost.com/).
+
+| Devpost field | Answer |
+| --- | --- |
+| Category | **The Collaborative Partner** |
+| Hosted project | https://socraitia-web-424012738412.us-central1.run.app |
+| Code repository | https://github.com/rdbetancur/socraitia (public — no collaborator invite needed) |
+| Architecture diagram | [`docs/architecture.png`](docs/architecture.png) and the Mermaid above |
+| Spin-up | this README, section *Reproducible spin-up* |
+| Findings and learnings | this README, section *Findings & learnings* |
+| Technologies | Gemini 3.5 Flash, Google ADK, Vertex AI, Cloud Run, Firestore, Pub/Sub, Cloud Storage, Next.js |
+| Other data sources | Google Search (Verifier grounding); user-uploaded academic PDFs |
+
+**Why this track.** The brief is: *lead the way and take notes; ask
+clarifying questions; guide step-by-step; capture feedback; adapt to the
+user's unique way of thinking.* That is the Socratic agent + learner model
++ `this helped` / `this missed`. The async Verifier, PDF ingestion and
+briefing are the 40% *operational utility* — the partner that keeps working
+after the tab closes — not a second track.
+
+We do **not** claim The Fortified Enterprise Fleet (no Agent Registry,
+Model Armor, or enterprise identity). We do **not** claim the Gemma / Veo /
+Lyria bonus; the classification task stayed inside the Cartographer.
+
+### How the product maps to the criteria
+
+| Criterion (weight) | What a judge should see |
+| --- | --- |
+| Innovation & operational utility (40%) | A claim is spoken → Cartographer mutates the graph → Pub/Sub queues the Verifier → evidence and red tension edges arrive while the user is gone → the briefing confronts them on return. PDF drop → section-aware claims with provenance → literature-vs-you contradiction. |
+| Architectural discipline (30%) | SHA-1 node identity (dedupe + idempotency + edge resolution). Document-level ingest hash. Context = graph + last 6 + learner, never full replay. Two-region reality isolated in `config.py`. Failure table above. IAM least-privilege in `infra/iam_setup.sh`. |
+| Demo & production readiness (30%) | Live Cloud Run URLs. `verify_stack.sh` 7/7. Seeded demo (`seed_demo.py`). Architecture PNG. This README is the spin-up. |
+
+### Four-minute demo (shoot this)
+
+Judges score the first four minutes only, in English, public on YouTube or
+Vimeo. Show the backend on Google Cloud (Cloud Run URL or console) on
+camera.
+
+1. Open the live URL → briefing on **AI in Education** (arrival).
+2. Click a tension → **Interrogate** → the question is about *that* claim.
+3. Filter `mastery` in the index → click → canvas centers, dossier reads
+   relations as full sentences.
+4. Send one turn that contradicts a seeded claim → session pulse ticks →
+   red edge / attention row appears.
+5. Drop or mention a PDF (or point at the ingested node with provenance).
+6. Switch to **EdTech Product Strategy** → echo to the other project.
+7. 10 seconds of Cloud Run / the `.run.app` URL. Cut.
 
 ---
 

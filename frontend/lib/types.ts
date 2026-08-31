@@ -33,6 +33,7 @@ export interface GraphNode {
   session_id: string;
   degree: number;
   created_at: string;
+  verified_at?: string;
   provenance?: string;
   echoes?: Echo[];
   /** Set client-side when a node arrives in a live diff, to drive the pulse. */
@@ -124,4 +125,55 @@ export interface Dossier {
   incoming: { relation: Relation; node: GraphNode }[];
   outgoing: { relation: Relation; node: GraphNode }[];
   echoes: Echo[];
+}
+
+export interface BriefingSide {
+  node_id: string;
+  text: string;
+  source?: string;
+  provenance?: string;
+}
+
+export interface Briefing {
+  since: string;
+  empty: boolean;
+  counts: {
+    verified: number;
+    evidence: number;
+    tensions: number;
+    echoes: number;
+    ingested: number;
+  };
+  tensions: {
+    edge_id: string;
+    at: string;
+    by: string;
+    a: BriefingSide;
+    b: BriefingSide;
+  }[];
+  echoes: {
+    edge_id: string;
+    at: string;
+    similarity: number;
+    local: BriefingSide;
+    remote: { text: string; project_id: string; project_title: string };
+  }[];
+  verified: { node_id: string; text: string; at: string; evidence: string[] }[];
+  ingested: {
+    node_id: string;
+    text: string;
+    provenance: string;
+    at: string;
+  }[];
+  unseen?: Briefing["counts"];
+  unseen_empty?: boolean;
+}
+
+/** What this session has accumulated. Derived client-side from live events. */
+export interface SessionPulse {
+  nodes: number;
+  edges: number;
+  tensions: number;
+  gaps: number;
+  echoes: number;
 }

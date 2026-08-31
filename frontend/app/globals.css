@@ -13,9 +13,9 @@
   --bg-raised: #14171c;
   --border: #1e2228;
   --border-bright: #2b3138;
-  --text: #e6edf3;
-  --text-dim: #8b949e;
-  --text-faint: #545c66;
+  --text: #f0f3f6;
+  --text-dim: #c9d1d9;
+  --text-faint: #9aa4ae;
   --accent: #58a6ff;
   --danger: #f85149;
 
@@ -27,8 +27,16 @@
     monospace;
 
   --rail: 400px;
+  --panel: 340px;
   --topbar: 46px;
-  --statusbar: 30px;
+  --statusbar: 34px;
+
+  /* Attention language. Shared by canvas, panel, dossier and briefing so the
+     three surfaces cannot drift apart. */
+  --tension: #f85149;
+  --echo: #7ee787;
+  --gap: #db6d28;
+  --verified: #3fb950;
 }
 
 * {
@@ -76,18 +84,18 @@ body {
 
 .meta {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: 0.04em;
-  color: var(--text-faint);
+  color: var(--text-dim);
   text-transform: uppercase;
 }
 
 .panel-title {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: 0.11em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text-dim);
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -130,13 +138,47 @@ body {
 
 .kv {
   font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-faint);
+  font-size: 12px;
+  color: var(--text-dim);
   letter-spacing: 0.03em;
 }
 .kv b {
-  color: var(--text-dim);
+  color: var(--text);
   font-weight: 500;
+}
+
+.briefing-btn {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  padding: 5px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.briefing-btn:hover:not(:disabled) {
+  border-color: #4a535e;
+  background: rgba(255, 255, 255, 0.04);
+}
+.briefing-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.briefing-badge {
+  font-size: 10.5px;
+  letter-spacing: 0;
+  color: var(--text);
+  background: var(--tension);
+  padding: 0 5px;
+  line-height: 1.5;
+  min-width: 1.3em;
+  text-align: center;
 }
 
 .live {
@@ -144,9 +186,9 @@ body {
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: 0.1em;
-  color: var(--text-faint);
+  color: var(--text-dim);
 }
 
 .dot {
@@ -175,8 +217,13 @@ body {
 
 .main {
   display: grid;
-  grid-template-columns: 1fr var(--rail);
+  grid-template-columns: var(--panel) 1fr var(--rail);
   min-height: 0;
+}
+
+/* Demo mode: the map alone, nothing competing with it. */
+.main-solo {
+  grid-template-columns: 0 1fr var(--rail);
 }
 
 .stage {
@@ -352,9 +399,9 @@ button.send:disabled {
 .session-end {
   background: none;
   border: 1px solid var(--border);
-  color: var(--text-faint);
+  color: var(--text-dim);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 3px 8px;
@@ -426,8 +473,8 @@ button.send:disabled {
   border-top: 1px solid var(--border);
   background: var(--bg-panel);
   font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-faint);
+  font-size: 12.5px;
+  color: var(--text-dim);
   letter-spacing: 0.04em;
 }
 
@@ -586,7 +633,7 @@ button.send:disabled {
   position: absolute;
   top: 14px;
   left: 14px;
-  width: 340px;
+  width: 380px;
   max-height: calc(100% - 28px);
   overflow-y: auto;
   background: rgba(13, 15, 18, 0.94);
@@ -600,8 +647,9 @@ button.send:disabled {
 }
 
 .dossier-text {
-  font-size: 14px;
+  font-size: 15.5px;
   line-height: 1.55;
+  color: var(--text);
   margin-bottom: 13px;
 }
 
@@ -610,11 +658,11 @@ button.send:disabled {
   grid-template-columns: 74px 1fr;
   gap: 4px 10px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 12px;
   margin-bottom: 14px;
 }
 .dossier-grid dt {
-  color: var(--text-faint);
+  color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -629,9 +677,9 @@ button.send:disabled {
 
 .rel-head {
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11.5px;
   letter-spacing: 0.12em;
-  color: var(--text-faint);
+  color: var(--text-dim);
   text-transform: uppercase;
   margin-bottom: 5px;
 }
@@ -763,7 +811,7 @@ button.send:disabled {
 
 .focus-chip-label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--accent);
@@ -771,7 +819,7 @@ button.send:disabled {
 }
 
 .focus-chip-text {
-  color: var(--text-dim, #7d868f);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -793,7 +841,7 @@ button.send:disabled {
 
 .interrogate-btn {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
@@ -829,4 +877,606 @@ button.send:disabled {
   letter-spacing: 0.22em;
   color: #4a5560;
   text-transform: uppercase;
+}
+
+/* =========================================================================
+   THE ATTENTION SURFACES
+   Badges, panel, briefing, pulse. One vocabulary: a red mark always means an
+   unresolved tension, green always means a cross-project echo, a dashed ring
+   always means the Verifier has not come back yet. Nothing here is decorative.
+   ========================================================================= */
+
+/* --- badges: the shared marks -------------------------------------------- */
+.bdg {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border: 1px solid;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.bdg-tension {
+  color: var(--tension);
+  border-color: rgba(248, 81, 73, 0.45);
+  background: rgba(248, 81, 73, 0.09);
+}
+.bdg-echo {
+  color: var(--echo);
+  border-color: rgba(126, 231, 135, 0.4);
+  background: rgba(126, 231, 135, 0.08);
+}
+.bdg-pending {
+  color: var(--text-faint);
+  border-color: var(--border-bright);
+  border-style: dashed;
+}
+.bdg-verified {
+  color: var(--verified);
+  border-color: rgba(63, 185, 80, 0.35);
+}
+.bdg-doc {
+  color: #a5d6ff;
+  border-color: rgba(165, 214, 255, 0.3);
+}
+
+.ghost-btn {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border-bright);
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.ghost-btn:hover {
+  color: var(--text);
+  border-color: #3b434d;
+}
+
+.interrogate-sm {
+  margin: 0;
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+/* --- left panel: index + attention --------------------------------------- */
+.panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--bg-panel);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel-collapse,
+.panel-reopen {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.panel-collapse:hover,
+.panel-reopen:hover {
+  color: var(--text-dim);
+  border-color: var(--border-bright);
+}
+
+/* Lives in the topbar, not over the canvas: the dossier already owns the
+   top-left of the stage, and a control that moves is a control you hunt for. */
+.panel-reopen {
+  padding: 4px 8px;
+}
+
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.panel-filter {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-filter input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 8px;
+  outline: none;
+}
+.panel-filter input:focus {
+  border-color: var(--border-bright);
+}
+.panel-filter input::placeholder {
+  color: #6e7681;
+}
+.panel-filter button {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.panel-matches,
+.panel-empty {
+  padding: 7px 12px 0;
+}
+
+/* --- requires your attention --------------------------------------------- */
+.attn {
+  border-bottom: 1px solid var(--border);
+}
+
+.attn-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  background: rgba(248, 81, 73, 0.05);
+  border: none;
+  border-left: 2px solid var(--tension);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: left;
+}
+.attn-head:hover {
+  background: rgba(248, 81, 73, 0.09);
+}
+
+.attn-n {
+  font-size: 10px;
+  color: var(--tension);
+}
+
+/* Capped so the index below stays reachable without scrolling past every
+   open tension. */
+.attn-body {
+  padding: 4px 0 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.attn-item {
+  padding: 9px 12px 10px;
+  border-left: 2px solid transparent;
+  margin-bottom: 2px;
+}
+.attn-tension {
+  border-left-color: rgba(248, 81, 73, 0.55);
+}
+.attn-gap {
+  border-left-color: rgba(219, 109, 40, 0.55);
+}
+.attn-echo-item {
+  border-left-color: rgba(126, 231, 135, 0.5);
+}
+
+.attn-kind {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+.attn-tension .attn-kind {
+  color: var(--tension);
+}
+.attn-gap .attn-kind {
+  color: var(--gap);
+}
+.attn-echo-item .attn-kind {
+  color: var(--echo);
+}
+
+.attn-claim {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text);
+  cursor: pointer;
+}
+.attn-claim:hover {
+  color: #fff;
+}
+
+.attn-vs {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tension);
+  margin: 6px 0 2px;
+}
+
+.attn-side {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #d0d7de;
+  margin-bottom: 2px;
+}
+
+.attn-remote {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-bright);
+}
+
+.attn-item .interrogate-btn {
+  margin-top: 8px;
+}
+
+/* --- the index ----------------------------------------------------------- */
+.idx-group {
+  padding: 4px 0 6px;
+}
+
+.idx-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.11em;
+  color: var(--text-dim);
+}
+
+.idx-group-n {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+.idx-row {
+  padding: 7px 12px 8px;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+.idx-row:hover {
+  background: rgba(255, 255, 255, 0.022);
+  border-left-color: var(--border-bright);
+}
+.idx-row-on {
+  background: rgba(88, 166, 255, 0.07);
+  border-left-color: var(--accent);
+}
+.idx-row-settled .idx-text {
+  color: var(--text-dim);
+}
+
+/* Two lines by default; the whole thought on hover. A half-sentence in an
+   index is worse than no index. */
+.idx-text {
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.idx-row:hover .idx-text,
+.idx-row-on .idx-text {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.idx-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.idx-prov {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* --- session pulse ------------------------------------------------------- */
+.pulse {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.014);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.pulse-label {
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-faint);
+}
+
+.pulse-stat b {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.pulse-tension b {
+  color: var(--tension);
+}
+.pulse-gap b {
+  color: var(--gap);
+}
+.pulse-echo b {
+  color: var(--echo);
+}
+
+/* --- living dossier ------------------------------------------------------ */
+.dossier-typeline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+
+.dossier-origin {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: -6px 0 12px;
+}
+
+.dossier-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.dossier-actions .interrogate-btn {
+  margin: 0;
+}
+
+.dossier-story {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+/* Relations read as sentences, never as ids. */
+.rel-sentence {
+  border-left: 2px solid var(--border-bright);
+  padding: 6px 0 6px 8px;
+  margin-bottom: 5px;
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.rel-sentence:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.rel-verb {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.rel-target {
+  color: var(--text);
+}
+
+.rel-where {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+/* --- the briefing -------------------------------------------------------- */
+.brief-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 34px 24px;
+  background: rgba(4, 5, 7, 0.82);
+  backdrop-filter: blur(3px);
+  animation: brief-in 0.22s ease-out;
+}
+
+@keyframes brief-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.brief {
+  width: 100%;
+  max-width: 760px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+
+.brief-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brief-title {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-top: 6px;
+}
+
+.brief-dismiss {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.brief-dismiss:hover {
+  background: rgba(88, 166, 255, 0.18);
+}
+
+.brief-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.brief-count b {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  margin-right: 3px;
+}
+
+.brief-body {
+  overflow-y: auto;
+  padding: 4px 20px 20px;
+}
+
+.brief-section {
+  padding-top: 16px;
+}
+
+.brief-section-head {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 9px;
+}
+
+.brief-item {
+  padding: 11px 13px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-raised);
+  border-left: 2px solid var(--border-bright);
+}
+.brief-tension {
+  border-left-color: var(--tension);
+}
+.brief-echo {
+  border-left-color: var(--echo);
+}
+
+.brief-side-tag {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.brief-side p {
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.brief-vs {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 9px 0;
+}
+
+.brief-claim {
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.brief-evidence {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin-top: 6px;
+  padding-left: 9px;
+  border-left: 1px solid var(--border-bright);
+}
+
+.brief-prov {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+.brief-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+}
+.brief-actions .interrogate-btn {
+  margin: 0;
 }

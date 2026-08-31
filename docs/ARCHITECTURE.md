@@ -36,8 +36,8 @@ This is not a preference. It is what the live API returned on 2026-08-29
 | Firestore `socraitia` | — | `us-central1` | — |
 
 `backend/app/config.py` is the only file that names a model or a region.
-Agents inherit `GEMINI_LOCATION=global`. Veo, when it lands in Phase 6, will
-open a second client on `VEO_LOCATION=us-central1`. Mixing those on one
+Agents inherit `GEMINI_LOCATION=global`. Veo is listed there as a reserved
+identifier; this build does not call it. Mixing those on one
 `genai.Client` is how you get a 404 that looks like an IAM bug.
 
 ## Agents

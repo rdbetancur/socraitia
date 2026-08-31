@@ -25,7 +25,7 @@ from app.graph import repo
 from app.logging_setup import agent_log, setup_logging
 from app.agents import modeler
 from app.schemas import FeedbackRequest, ProjectCreate, SessionEndRequest, TurnRequest
-from app.services import bus, ingest
+from app.services import briefing, bus, ingest
 from app.services import model as modeler_svc
 from app.services import turn, verify
 
@@ -138,6 +138,31 @@ async def bootstrap(project_id: str | None = Query(default=None)) -> dict:
         },
         **_graph_payload(snapshot),
     }
+
+
+@app.get("/api/briefing/{project_id}")
+async def get_briefing(
+    project_id: str, full: bool = Query(default=False)
+) -> dict:
+    """Derived on read from node/edge timestamps.
+
+    Default: only what landed since last_seen_at (arrival + unread badge).
+    `full=true`: the current instrument state, independent of the watermark —
+    so the overlay can be reopened after dismiss without a reset script.
+    """
+    snapshot = await repo.load_graph(project_id)
+    seen = await repo.load_last_seen(config.DEMO_UID, project_id)
+    payload = briefing.build(snapshot, "" if full else seen)
+    if full:
+        unseen = briefing.build(snapshot, seen)
+        payload["unseen"] = unseen["counts"]
+        payload["unseen_empty"] = unseen["empty"]
+    return payload
+
+
+@app.post("/api/briefing/{project_id}/seen")
+async def mark_briefing_seen(project_id: str) -> dict:
+    return {"last_seen_at": await repo.mark_seen(config.DEMO_UID, project_id)}
 
 
 @app.get("/api/projects")
